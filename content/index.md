@@ -22,5 +22,10 @@ title: 关于我
 
 本站由 [Quartz](https://quartz.jzhao.xyz) 构建，托管在 GitHub Pages，全部文章用 Markdown 书写于 Obsidian，0 成本运行。
 
-- 想自己搭一个一样的？我的搭建记录在这里：【写完后把笔记链接放到这里】
+- 想自己搭一个一样的？我的搭建记录在这里：
+- 【 这个博客是怎么搭建的】
+- **写作**：Obsidian（本地 Markdown 笔记）
+- **框架**：Quartz 4（把 Markdown 变成网站）
+- **托管**：GitHub Pages（免费）
+- **费用**：0 元起步
 - 站内所有页面支持全文搜索（右上角放大镜）
