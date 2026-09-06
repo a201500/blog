@@ -1,26 +1,47 @@
 @use "./base.scss";
+@use "./variables.scss" as *;
 
-// ====== 主题：极简画廊风（移植自 astro-art-portfolio）======
+// ====== 主题：极简画廊单栏（移植自 astro-art-portfolio）======
 
-// 字体链：标题用高对比衬线（英文 Playfair Display），中文回退黑体加粗；
-// 正文几何无衬线 + 系统中文
+// ---- 字体链：衬线标题（英文 Playfair / 中文宋体系），正文无衬线 + 系统中文 ----
 :root {
   --headerFont: "Playfair Display", "Source Han Serif SC", "STZhongsong", "SimSun", serif;
   --bodyFont: "Source Sans Pro", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
 }
 
-// 正文阅读节奏
-article {
-  line-height: 1.9;
+// ---- 布局：去掉侧栏占位，整站居中窄栏 ----
+.page {
+  max-width: 780px;
 }
 
-// ====== 首页 hero（对齐参考图的居中编辑风）======
+.page > #quartz-body {
+  grid-template-columns: 1fr min(92vw, 720px) 1fr;
+
+  @media all and ($tablet) {
+    grid-template-columns: 1fr min(92vw, 720px) 1fr;
+  }
+}
+
+// ---- 顶栏：站名居左，搜索/明暗切换居右，极简 ----
+.page-header {
+  align-items: center;
+  margin: 1.6rem 0 0.5rem;
+
+  .page-title > a {
+    font-family: var(--headerFont);
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+}
+
+// ---- 首页 hero：大号衬线标题居中 ----
 [data-slug="index"] .article-title {
   text-align: center;
-  font-size: 3rem;
+  font-size: 3.2rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
-  margin: 1.2rem 0 0.4rem;
+  margin: 2.2rem 0 0.6rem;
+  line-height: 1.25;
 }
 
 [data-slug="index"] article {
@@ -31,9 +52,19 @@ article {
   text-align: left;
 }
 
-// 全站标题：衬线体的优雅密度
-h1, h2, h3 {
-  letter-spacing: 0.005em;
+[data-slug="index"] .content-meta {
+  justify-content: center;
+  margin-top: 0;
+}
+
+// ---- 文章排版 ----
+article {
+  line-height: 1.9;
+
+  & > h1 {
+    font-size: 2.3rem;
+    line-height: 1.3;
+  }
 }
 
 // 行内代码与代码块圆角
@@ -41,7 +72,8 @@ code {
   border-radius: 4px;
 }
 
-// 侧栏站名（PageTitle）的衬线气质
-.page-title > h1, .page-title > a {
-  font-family: var(--headerFont);
+// ---- 页脚居中、弱化 ----
+footer {
+  text-align: center;
+  font-size: 0.85rem;
 }
