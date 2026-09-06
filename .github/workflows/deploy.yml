@@ -32,7 +32,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - run: npm ci
-      - run: npx quartz build
+      - name: Ensure exec permissions
+        run: |
+          chmod +x quartz/bootstrap-cli.mjs || true
+          chmod +x node_modules/.bin/* || true
+      - run: node quartz/bootstrap-cli.mjs build
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public
