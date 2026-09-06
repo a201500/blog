@@ -8,8 +8,9 @@ export const sharedPageComponents: SharedLayout = {
   afterBody: [],
   footer: Component.Footer({
     links: {
-      GitHub: "https://github.com/jackyzha0/quartz",
-      "Discord Community": "https://discord.gg/cRFFHYye7t",
+      GitHub: "https://github.com/a201500",
+      博客园: "https://www.cnblogs.com/erased",
+      RSS: "/index.xml",
     },
   }),
 }
@@ -24,6 +25,22 @@ export const defaultContentPageLayout: PageLayout = {
     Component.ArticleTitle(),
     Component.ContentMeta(),
     Component.TagList(),
+  ],
+  afterBody: [
+    Component.Comments({
+      provider: "giscus",
+      options: {
+        repo: "a201500/blog",
+        repoId: "R_kgDOUQGfoQ",
+        category: "Announcements",
+        categoryId: "DIC_kwDOUQGfoc4DFAQG",
+        mapping: "pathname",
+        strict: false,
+        reactionsEnabled: true,
+        inputPosition: "top",
+        lang: "zh-CN",
+      },
+    }),
   ],
   left: [
     Component.PageTitle(),

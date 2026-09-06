@@ -8,7 +8,7 @@ title: 关于我
 
 - GitHub: [a201500](https://github.com/a201500)
 - 博客园: [erased](https://www.cnblogs.com/erased)
-- 邮箱: 【你的邮箱】
+- 邮箱:【bcd2027@qq.com】
 
 ## 这个博客写什么
 

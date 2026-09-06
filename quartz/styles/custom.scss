@@ -1,3 +1,24 @@
 @use "./base.scss";
 
-// put your custom CSS here!
+// ====== 个性化定制（改完自动热更新，发布用 发布更新.bat）======
+
+// 中文字体回退链：英文用 Web 字体，中文走系统苹方/微软雅黑，保证加载快
+:root {
+  --bodyFont: "Source Sans Pro", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+  --headerFont: "Schibsted Grotesk", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+}
+
+// 正文行距更舒展，适合中文长文阅读
+article {
+  line-height: 1.9;
+}
+
+// 站名（左上角）更有存在感
+.page-title {
+  letter-spacing: 0.02em;
+}
+
+// 行内代码微调
+code {
+  border-radius: 4px;
+}
