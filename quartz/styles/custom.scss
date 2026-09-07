@@ -1,5 +1,8 @@
 @use "./base.scss";
 @use "./variables.scss" as *;
+// 主题文件在 quartz/styles/themes/_index.scss（things）
+// 想用回它就取消下面这行注释，注意它会覆盖本文件里的配色变量
+// @use "./themes";
 
 // ====== 主题：极简画廊单栏（移植自 astro-art-portfolio）======
 
@@ -9,16 +12,36 @@
   --bodyFont: "Source Sans Pro", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
 }
 
-// ---- 布局：去掉侧栏占位，整站居中窄栏 ----
+// ---- 布局：左侧固定栏 + 内容区（移植 Cola 版式）----
+$sidebarWidth: 240px;
+
 .page {
-  max-width: 780px;
+  max-width: 1100px;
 }
 
 .page > #quartz-body {
-  grid-template-columns: 1fr min(92vw, 720px) 1fr;
+  grid-template-columns: $sidebarWidth minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  grid-template-areas:
+    "grid-sidebar-left grid-header"
+    "grid-sidebar-left grid-center"
+    "grid-sidebar-left grid-footer";
+  column-gap: 2.4rem;
 
   @media all and ($tablet) {
-    grid-template-columns: 1fr min(92vw, 720px) 1fr;
+    grid-template-columns: 200px minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "grid-sidebar-left grid-header"
+      "grid-sidebar-left grid-center"
+      "grid-sidebar-left grid-footer";
+  }
+
+  & .sidebar {
+    padding-top: 2.5rem;
+    padding-left: 0;
+    padding-right: 0;
+    gap: 1rem;
   }
 }
 
@@ -35,26 +58,30 @@
   }
 }
 
-// ---- 首页 hero：大号衬线标题居中 ----
+// ---- 首页：左对齐标题 + 链接胶囊（home-chip 做法）----
 [data-slug="index"] .article-title {
-  text-align: center;
-  font-size: 3.2rem;
+  font-size: 2.3rem;
   font-weight: 600;
-  margin: 2.2rem 0 0.6rem;
+  margin: 1.2rem 0 0.7rem;
   line-height: 1.25;
 }
 
-[data-slug="index"] article {
-  text-align: center;
+[data-slug="index"] article > p > a {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--lightgray) 76%, transparent);
+  background: color-mix(in srgb, var(--lightgray) 48%, transparent);
+  border-radius: 5px;
+  padding: 0.12rem 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.16s, border-color 0.16s, background 0.16s;
 }
 
-[data-slug="index"] article li {
-  text-align: left;
-}
-
-[data-slug="index"] .content-meta {
-  justify-content: center;
-  margin-top: 0;
+[data-slug="index"] article > p > a:hover {
+  color: var(--secondary);
+  border-color: color-mix(in srgb, var(--secondary) 40%, transparent);
 }
 
 // ---- 文章排版 ----
@@ -76,4 +103,45 @@ code {
 footer {
   text-align: center;
   font-size: 0.85rem;
+}
+
+// ---- 标签胶囊（文章页 / 列表页通用）----
+ul.tags a,
+a.tag-link {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--lightgray) 76%, transparent);
+  background: color-mix(in srgb, var(--lightgray) 48%, transparent);
+  border-radius: 5px;
+  padding: 0.08rem 0.45rem;
+  font-size: 0.78rem;
+  text-decoration: none;
+  transition: color 0.16s, border-color 0.16s;
+}
+
+ul.tags a:hover,
+a.tag-link:hover {
+  color: var(--secondary);
+  border-color: color-mix(in srgb, var(--secondary) 40%, transparent);
+}
+
+// ---- 正文图片圆角 ----
+article img {
+  border-radius: 6px;
+}
+
+// ---- 移动端：左栏收成顶部横条，只留身份卡 ----
+@media all and ($mobile) {
+  [data-slug="index"] .article-title {
+    font-size: 2.2rem;
+  }
+
+  .sidebar.left .profile {
+    width: 100%;
+  }
+
+  .profile-motto,
+  .profile-links {
+    display: none;
+  }
 }

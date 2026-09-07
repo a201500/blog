@@ -23,6 +23,10 @@ import Breadcrumbs from "./Breadcrumbs"
 import Comments from "./Comments"
 import Flex from "./Flex"
 import ConditionalRender from "./ConditionalRender"
+import Profile from "./Profile"
+import ArticleGrid from "./ArticleGrid"
+import Nav from "./Nav"
+import TagWall from "./TagWall"
 
 export {
   ArticleTitle,
@@ -50,4 +54,8 @@ export {
   Comments,
   Flex,
   ConditionalRender,
+  Profile,
+  ArticleGrid,
+  Nav,
+  TagWall,
 }
