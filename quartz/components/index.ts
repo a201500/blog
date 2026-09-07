@@ -24,9 +24,12 @@ import Comments from "./Comments"
 import Flex from "./Flex"
 import ConditionalRender from "./ConditionalRender"
 import Profile from "./Profile"
-import ArticleGrid from "./ArticleGrid"
 import Nav from "./Nav"
 import TagWall from "./TagWall"
+import HomeIntro from "./HomeIntro"
+import PostList from "./PostList"
+import ProjectCards from "./ProjectCards"
+import ProjectShowcase from "./ProjectShowcase"
 
 export {
   ArticleTitle,
@@ -55,7 +58,10 @@ export {
   Flex,
   ConditionalRender,
   Profile,
-  ArticleGrid,
   Nav,
   TagWall,
+  HomeIntro,
+  PostList,
+  ProjectCards,
+  ProjectShowcase,
 }

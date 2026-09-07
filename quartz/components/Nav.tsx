@@ -7,13 +7,29 @@ export interface NavLink {
   href: string
 }
 
-export default ((opts?: { links: NavLink[] }) => {
+interface Options {
+  links: NavLink[]
+  /** 左上角圆形标识（点回首页） */
+  brand?: { text: string; href: string }
+}
+
+export default ((opts?: Options) => {
   const Nav: QuartzComponent = ({ fileData, displayClass }: QuartzComponentProps) => {
     const links = opts?.links ?? []
+    const brand = opts?.brand
     const current = fileData.slug ?? ""
 
     return (
       <nav class={displayClass ? `top-nav ${displayClass}` : "top-nav"}>
+        {brand && (
+          <a
+            class="top-nav-brand"
+            href={resolveRelative(fileData.slug!, brand.href as FullSlug)}
+            aria-label={brand.text}
+          >
+            {brand.text}
+          </a>
+        )}
         <ul>
           {links.map((l) => {
             const external = /^https?:/.test(l.href)
@@ -40,6 +56,32 @@ export default ((opts?: { links: NavLink[] }) => {
   }
 
   Nav.css = `
+.top-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.top-nav-brand {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 50%;
+  background: var(--secondary);
+  color: var(--light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: transform 0.16s;
+}
+
+.top-nav-brand:hover {
+  transform: scale(1.06);
+}
+
 .top-nav ul {
   list-style: none;
   display: flex;

@@ -13,35 +13,25 @@
 }
 
 // ---- 布局：左侧固定栏 + 内容区（移植 Cola 版式）----
-$sidebarWidth: 240px;
-
 .page {
-  max-width: 1100px;
+  max-width: 780px;
 }
 
 .page > #quartz-body {
-  grid-template-columns: $sidebarWidth minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto auto;
   grid-template-areas:
-    "grid-sidebar-left grid-header"
-    "grid-sidebar-left grid-center"
-    "grid-sidebar-left grid-footer";
-  column-gap: 2.4rem;
+    "grid-header"
+    "grid-center"
+    "grid-footer";
 
   @media all and ($tablet) {
-    grid-template-columns: 200px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto auto;
     grid-template-areas:
-      "grid-sidebar-left grid-header"
-      "grid-sidebar-left grid-center"
-      "grid-sidebar-left grid-footer";
-  }
-
-  & .sidebar {
-    padding-top: 2.5rem;
-    padding-left: 0;
-    padding-right: 0;
-    gap: 1rem;
+      "grid-header"
+      "grid-center"
+      "grid-footer";
   }
 }
 
@@ -59,11 +49,32 @@ $sidebarWidth: 240px;
 }
 
 // ---- 首页：左对齐标题 + 链接胶囊（home-chip 做法）----
+/* 首页大标题由 HomeIntro 的 hero 渲染，隐藏 Quartz 自带的那一个 */
 [data-slug="index"] .article-title {
-  font-size: 2.3rem;
-  font-weight: 600;
-  margin: 1.2rem 0 0.7rem;
-  line-height: 1.25;
+  display: none;
+}
+
+/* 博客页：隐藏大标题和日期，直接进筛选 + 列表（对齐参考站） */
+[data-slug="博客/index"] .article-title,
+[data-slug="博客/index"] .content-meta {
+  display: none;
+}
+
+/* 博客页/项目页：隐藏 Quartz folder 自带的文件列表，博客用 PostList、项目用 ProjectShowcase 渲染 */
+[data-slug="博客/index"] .page-listing,
+[data-slug="项目/index"] .page-listing {
+  display: none;
+}
+
+/* 项目页：隐藏大标题和日期，由 ProjectShowcase 的 headline 渲染（对齐 chengliang） */
+[data-slug="项目/index"] .article-title,
+[data-slug="项目/index"] .content-meta {
+  display: none;
+}
+
+/* 首页不显示日期行（内容由 frontmatter 驱动） */
+[data-slug="index"] .content-meta {
+  display: none;
 }
 
 [data-slug="index"] article > p > a {

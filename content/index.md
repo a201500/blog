@@ -1,21 +1,15 @@
 ---
-title: 莫工
+title: 莫子剑
+lede: 我是莫子剑，也可以叫我莫工。制冷专业出身，现在做电子硬件，正在啃高速电路板设计。这里放学习笔记和做过的项目。
+focus:
+  - 嵌入式开发
+  - 独立产品
+  - AI 工具
+  - 英语学习
+contact:
+  GitHub: https://github.com/a201500
+  博客园: https://www.cnblogs.com/erased
+email: bcd2027@qq.com
 ---
 
-# 莫工
-
-制冷专业出身，现在做电子硬件，正在啃高速电路板设计。
-
-这个站放两样东西：**学习笔记**，和**做过的东西**。文章全部用 Obsidian 写，双链和图谱原样保留。
-
-## 现在在折腾
-
-- **高速电路板** — 阻抗匹配、差分对、层叠设计，边学边记
-- **这个站** — Quartz 深度改造中，从笔记花园改成能放进简历的作品集
-- **爬虫** — 把社区里的经验帖扒下来整理成 Markdown，减少信息差
-
-## 找我
-
-[GitHub](https://github.com/a201500) · [博客园](https://www.cnblogs.com/erased) · [邮箱](mailto:bcd2027@qq.com)
-
-更多背景见[关于](关于)页。
+%% 首页内容由上面的 frontmatter 驱动：lede 一句话介绍、focus 关注领域、projects 代表项目、contact 联系方式。改这里就能改首页，不用动代码。 %%

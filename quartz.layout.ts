@@ -1,8 +1,8 @@
 import { PageLayout, SharedLayout } from "./quartz/cfg"
 import * as Component from "./quartz/components"
 
-// 极简单栏布局（参考 astro-art-portfolio）：
-// 无侧栏，顶栏只有 站名 + 搜索 + 明暗切换，内容居中窄栏
+// 纯单栏作品集布局（对齐 chengliang.pro）：
+// 无侧栏，顶栏 = 首页标识 + 导航(博客/项目) + 搜索 + 明暗切换，内容居中窄栏
 
 // components shared across all pages
 export const sharedPageComponents: SharedLayout = {
@@ -12,11 +12,10 @@ export const sharedPageComponents: SharedLayout = {
       components: [
         {
           Component: Component.Nav({
+            brand: { text: "莫", href: "index" },
             links: [
-              { text: "首页", href: "index" },
-              { text: "标签", href: "tags/index" },
-              { text: "关于", href: "关于" },
-              { text: "GitHub", href: "https://github.com/a201500" },
+              { text: "博客", href: "博客" },
+              { text: "项目", href: "项目" },
             ],
           }),
           grow: true,
@@ -29,7 +28,7 @@ export const sharedPageComponents: SharedLayout = {
     }),
   ],
   afterBody: [
-    Component.ArticleGrid({ limit: 12 }),
+    Component.PostList({ limit: 3 }),
     Component.Comments({
       provider: "giscus",
       options: {
@@ -54,32 +53,26 @@ export const sharedPageComponents: SharedLayout = {
   }),
 }
 
-// 左侧固定栏（Cola 版式）：身份卡 + 文章导航
-const sidebarLeft = [
-  Component.Profile({
-    name: "莫工",
-    tags: ["暖通制冷", "电子硬件"],
-    motto: "写给自己看，顺便能帮到别人。",
-    links: {
-      GitHub: "https://github.com/a201500",
-      博客园: "https://www.cnblogs.com/erased",
-      邮箱: "mailto:bcd2027@qq.com",
-      RSS: "index.xml",
-    },
-  }),
-  Component.DesktopOnly(Component.Explorer({ title: "文章" })),
-]
-
 // components for pages that display a single page (e.g. a single note)
 export const defaultContentPageLayout: PageLayout = {
-  beforeBody: [Component.ArticleTitle(), Component.ContentMeta(), Component.TagList()],
-  left: sidebarLeft,
+  beforeBody: [
+    Component.ArticleTitle(),
+    Component.ContentMeta(),
+    Component.TagList(),
+    Component.HomeIntro(),
+  ],
+  left: [],
   right: [],
 }
 
 // components for pages that display lists of pages  (e.g. tags or folders)
 export const defaultListPageLayout: PageLayout = {
-  beforeBody: [Component.ArticleTitle(), Component.ContentMeta(), Component.TagWall()],
-  left: sidebarLeft,
+  beforeBody: [
+    Component.ArticleTitle(),
+    Component.ContentMeta(),
+    Component.TagWall(),
+    Component.ProjectShowcase(),
+  ],
+  left: [],
   right: [],
 }
