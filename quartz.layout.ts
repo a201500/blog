@@ -48,7 +48,7 @@ export const sharedPageComponents: SharedLayout = {
     links: {
       GitHub: "https://github.com/a201500",
       博客园: "https://www.cnblogs.com/erased",
-      RSS: "/index.xml",
+      RSS: "https://a201500.github.io/blog/index.xml",
     },
   }),
 }
