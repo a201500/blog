@@ -14,8 +14,10 @@ export const sharedPageComponents: SharedLayout = {
           Component: Component.Nav({
             brand: { text: "莫", href: "index" },
             links: [
-              { text: "博客", href: "博客" },
-              { text: "项目", href: "项目" },
+              // folder 链接必须写成 .../index，让生成结果为带尾斜杠的 ./博客/
+              // 否则 SPA 的 normalizeRelativeURLs 会把页面内相对链接算少一层 → 二次点击 404
+              { text: "博客", href: "博客/index" },
+              { text: "项目", href: "项目/index" },
             ],
           }),
           grow: true,

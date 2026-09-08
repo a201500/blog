@@ -34,7 +34,15 @@ export default ((opts?: Options) => {
           {links.map((l) => {
             const external = /^https?:/.test(l.href)
             const href = external ? l.href : resolveRelative(fileData.slug!, l.href as FullSlug)
-            const active = !external && (current === l.href || current.startsWith(l.href + "/"))
+            // 文件夹链接写成 xxx/index 时，子页面（如 博客/某文章）也要高亮父级导航
+            const dirPrefix = l.href.endsWith("/index")
+              ? l.href.slice(0, -"/index".length)
+              : l.href
+            const active =
+              !external &&
+              (current === l.href ||
+                current.startsWith(l.href + "/") ||
+                current.startsWith(dirPrefix + "/"))
 
             return (
               <li>
