@@ -3,6 +3,8 @@ import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } fro
 
 export interface NavLink {
   text: string
+  /** 英文文案：切换语言后由 language.inline.ts 替换（不写则不翻译） */
+  textEn?: string
   /** 站内 slug（如 "index"、"tags/index"、"关于"），或 http 开头的完整外链 */
   href: string
 }
@@ -51,7 +53,12 @@ export default ((opts?: Options) => {
                     {l.text}
                   </a>
                 ) : (
-                  <a href={href} class={active ? "active" : undefined}>
+                  <a
+                    href={href}
+                    class={active ? "active" : undefined}
+                    data-nav-zh={l.textEn ? l.text : undefined}
+                    data-nav-en={l.textEn}
+                  >
                     {l.text}
                   </a>
                 )}

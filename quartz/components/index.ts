@@ -30,6 +30,9 @@ import HomeIntro from "./HomeIntro"
 import PostList from "./PostList"
 import ProjectCards from "./ProjectCards"
 import ProjectShowcase from "./ProjectShowcase"
+import LanguageToggle from "./LanguageToggle"
+import ArticleLangNote from "./ArticleLangNote"
+import FloatingToc from "./FloatingToc"
 
 export {
   ArticleTitle,
@@ -64,4 +67,7 @@ export {
   PostList,
   ProjectCards,
   ProjectShowcase,
+  LanguageToggle,
+  ArticleLangNote,
+  FloatingToc,
 }

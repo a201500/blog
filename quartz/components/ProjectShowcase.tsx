@@ -6,12 +6,13 @@ import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } fro
 /** 项目文件夹 slug 前缀（content/项目/） */
 export const PROJECT_DIR = "项目/"
 
-/** 聚合 项目/ 文件夹下的项目文章（排除 folder index 自身、草稿、exclude） */
+/** 聚合 项目/ 文件夹下的项目文章（排除 folder index 自身、草稿、exclude、英文独立版） */
 export function collectProjects(allFiles: QuartzPluginData[]): QuartzPluginData[] {
   return allFiles.filter(
     (f) =>
       f.slug?.startsWith(PROJECT_DIR) &&
       f.slug !== `${PROJECT_DIR}index` &&
+      f.frontmatter?.lang !== "en" && // 英文独立版（xxx-en.md）不单独成卡，正文由中文卡进入
       !f.frontmatter?.draft &&
       !f.frontmatter?.exclude &&
       !!f.frontmatter?.title,
@@ -37,59 +38,85 @@ export default (() => {
     const fm = fileData.frontmatter ?? {}
     const eyebrow = (fm.eyebrow as string) ?? "BUILD JOURNAL"
     const headline = (fm.headline as string) ?? (fm.title as string) ?? "项目"
+    const headlineEn = (fm.headlineEn as string) ?? "Delivered & In-Progress Work"
 
     const projects = collectProjects(allFiles).sort(byDateAndAlphabetical(cfg))
     if (projects.length === 0) return null
 
+    /** 渲染一张项目卡；lang 决定取中文还是英文字段 */
+    const renderItem = (p: QuartzPluginData, i: number, lang: "zh" | "en") => {
+      const pf = p.frontmatter ?? {}
+      const pick = (zh?: unknown, en?: unknown) => (lang === "en" ? (en ?? zh) : zh)
+      const title = pick(pf.title, pf.titleEn) as string
+      const desc = pick(pf.description, pf.descriptionEn) as string | undefined
+      const status = pick(pf.status, pf.statusEn) as string | undefined
+      const metric = pf.metric as string | undefined
+      const metricLabel = pick(pf.metricLabel, pf.metricLabelEn) as string | undefined
+      // 英文模式优先英文技术栈（如 "Hardware · Networking"），没有就回落中文
+      const stack = ((lang === "en" ? (pf.stackEn ?? pf.stack) : pf.stack) ?? []) as string[]
+      // 是否存在独立英文正文（同目录 xxx-en.md 且 frontmatter lang: en）
+      const hasEnVersion = allFiles.some(
+        (f) => f.frontmatter?.lang === "en" && f.slug?.startsWith(p.slug!),
+      )
+
+      if (!title) return null
+
+      return (
+        <a class="pj-item" href={resolveRelative(slug as FullSlug, p.slug!)}>
+          <span class="pj-num">{String(i + 1).padStart(2, "0")}</span>
+          {stack.length > 0 && (
+            <p class="pj-stack">{stack.map((s) => s.toUpperCase()).join(" · ")}</p>
+          )}
+          <h3 class="pj-name">{title}</h3>
+          {desc && <p class="pj-desc">{desc}</p>}
+          <div class="pj-foot">
+            {status && (
+              <span class="pj-status">
+                <span class="pj-dot" />
+                {status}
+              </span>
+            )}
+            {metric && (
+              <span class="pj-metric">
+                <strong>{metric}</strong>
+                {metricLabel && <small>{metricLabel}</small>}
+              </span>
+            )}
+          </div>
+          {/* 英文模式下如果没有独立英文正文，明确告知点击后是中文——避免点进去落差 */}
+          {lang === "en" && !hasEnVersion && (
+            <span class="pj-lang-note">Article in Chinese</span>
+          )}
+        </a>
+      )
+    }
+
     return (
       <section class="pj-showcase">
         <p class="pj-eyebrow">{eyebrow}</p>
-        <h1 class="pj-headline">{headline}</h1>
+        <h1 class="pj-headline">
+          <span data-lang-block="zh">{headline}</span>
+          <span data-lang-block="en">{headlineEn}</span>
+        </h1>
 
         <div class="pj-grid">
-          {projects.map((p, i) => {
-            const pf = p.frontmatter ?? {}
-            const title = pf.title as string
-            const desc = pf.description as string | undefined
-            const stack = (pf.stack ?? []) as string[]
-            const status = pf.status as string | undefined
-            const metric = pf.metric as string | undefined
-            const metricLabel = pf.metricLabel as string | undefined
-
-            return (
-              <a
-                class="pj-item"
-                href={resolveRelative(slug as FullSlug, p.slug!)}
-              >
-                <span class="pj-num">{String(i + 1).padStart(2, "0")}</span>
-                {stack.length > 0 && (
-                  <p class="pj-stack">{stack.map((s) => s.toUpperCase()).join(" · ")}</p>
-                )}
-                <h3 class="pj-name">{title}</h3>
-                {desc && <p class="pj-desc">{desc}</p>}
-                <div class="pj-foot">
-                  {status && (
-                    <span class="pj-status">
-                      <span class="pj-dot" />
-                      {status}
-                    </span>
-                  )}
-                  {metric && (
-                    <span class="pj-metric">
-                      <strong>{metric}</strong>
-                      {metricLabel && <small>{metricLabel}</small>}
-                    </span>
-                  )}
-                </div>
-              </a>
-            )
-          })}
+          <span data-lang-block="zh" class="pj-lang-wrap">
+            {projects.map((p, i) => renderItem(p, i, "zh"))}
+          </span>
+          <span data-lang-block="en" class="pj-lang-wrap">
+            {projects.map((p, i) => renderItem(p, i, "en"))}
+          </span>
         </div>
       </section>
     )
   }
 
   ProjectShowcase.css = `
+/* 双语块容器：本身不参与布局，让内部元素直接成为 grid 的项 */
+.pj-lang-wrap {
+  display: contents;
+}
+
 .pj-showcase {
   margin-top: 0.5rem;
 }
@@ -206,6 +233,15 @@ export default (() => {
 .pj-metric small {
   font-size: 0.72rem;
   color: var(--gray);
+}
+
+/* 英文模式下无独立英文正文时的提示（弱化小字） */
+.pj-lang-note {
+  font-size: 0.68rem;
+  color: var(--gray);
+  letter-spacing: 0.04em;
+  margin-top: 0.55rem;
+  opacity: 0.75;
 }
 
 @media all and (max-width: 700px) {

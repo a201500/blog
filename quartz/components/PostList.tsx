@@ -9,10 +9,20 @@ interface Options {
   limit?: number
 }
 
-/** 单条文章（rp-list 风格：标题 + 描述 + 标签，无封面） */
-export function renderPostItem(page: QuartzPluginData, currentSlug: FullSlug) {
-  const title = page.frontmatter?.title ?? ""
-  const desc = page.frontmatter?.description as string | undefined
+/**
+ * 单条文章（rp-list 风格：标题 + 描述 + 标签，无封面）
+ * lang 决定取哪一份文案：zh 用 title/description，en 用 titleEn/descriptionEn（缺则回落中文）
+ */
+export function renderPostItem(
+  page: QuartzPluginData,
+  currentSlug: FullSlug,
+  lang: "zh" | "en" = "zh",
+) {
+  const pf = page.frontmatter ?? {}
+  const title = (lang === "en" ? (pf.titleEn ?? pf.title) : pf.title) ?? ""
+  const desc = (lang === "en" ? (pf.descriptionEn ?? pf.description) : pf.description) as
+    | string
+    | undefined
   const tags = (page.frontmatter?.tags ?? []) as string[]
 
   return (
@@ -218,6 +228,7 @@ export default ((opts?: Options) => {
           f.slug !== "index" &&
           !f.slug?.endsWith("/index") && // folder 索引页（博客/index、项目/index）不是文章
           !f.slug?.startsWith("项目/") && // 项目文章只进项目页，不进博客列表
+          f.frontmatter?.lang !== "en" && // 英文独立版（xxx-en.md）不进中文列表
           !f.frontmatter?.draft &&
           !f.frontmatter?.exclude &&
           !!f.frontmatter?.title,
@@ -227,12 +238,41 @@ export default ((opts?: Options) => {
     const posts = isHome ? allPosts.slice(0, limit) : allPosts
     if (posts.length === 0) return null
 
-    // 年 → 月 → 文章
+    // 年 → 月 → 文章（月份标签也做双语：zh 用「9 月」，en 用「Sep」）
+    const zhMonths = [
+      "1 月",
+      "2 月",
+      "3 月",
+      "4 月",
+      "5 月",
+      "6 月",
+      "7 月",
+      "8 月",
+      "9 月",
+      "10 月",
+      "11 月",
+      "12 月",
+    ]
+    const enMonths = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ]
+    const monthLabel = (d: Date | undefined) => (d ? zhMonths[d.getMonth()] : "未分类")
     const years = new Map<number, Map<string, QuartzPluginData[]>>()
     posts.forEach((p) => {
       const d = getDate(cfg, p)
       const y = d ? d.getFullYear() : 0
-      const m = d ? `${d.getMonth() + 1} 月` : "未分类"
+      const m = monthLabel(d)
       if (!years.has(y)) years.set(y, new Map())
       const months = years.get(y)!
       const list = months.get(m) ?? []
@@ -248,13 +288,17 @@ export default ((opts?: Options) => {
       ),
     )
 
-    return (
-      <section class="post-list">
+    /**
+     * 同一份内容渲染中英两遍，分别包进 [data-lang-block="zh|en"]，
+     * 由 language.inline.ts 按当前语言显隐（整块切换，零延迟）。
+     */
+    const renderAll = (lang: "zh" | "en") => (
+      <>
         {isHome ? (
           <div class="post-list-head">
-            <h2>最新文章</h2>
+            <h2>{lang === "zh" ? "最新文章" : "Latest posts"}</h2>
             <a class="post-list-more" href={resolveRelative(slug, "博客/index" as FullSlug)}>
-              查看全部 →
+              {lang === "zh" ? "查看全部 →" : "View all →"}
             </a>
           </div>
         ) : (
@@ -263,7 +307,7 @@ export default ((opts?: Options) => {
               class="filter-chip filter-chip-active"
               href={resolveRelative(slug, "博客/index" as FullSlug)}
             >
-              全部 {allPosts.length}
+              {lang === "zh" ? `全部 ${allPosts.length}` : `All ${allPosts.length}`}
             </a>
             {[...tagCounts.entries()]
               .sort((a, b) => b[1] - a[1])
@@ -280,20 +324,37 @@ export default ((opts?: Options) => {
             {!isHome && (
               <div class="rp-year-head">
                 <span class="rp-year-tag">YEAR</span>
-                <span class="rp-year-label">{year || "未分类"}</span>
+                <span class="rp-year-label">{year || (lang === "zh" ? "未分类" : "Undated")}</span>
               </div>
             )}
-            {[...months.entries()].map(([month, items]) => (
-              <div class="rp-month">
-                <h3 class="rp-month-head">
-                  <span class="rp-month-label">{month}</span>
-                  <span class="rp-month-count">{items.length} 篇</span>
-                </h3>
-                <ol class="rp-list">{items.map((p) => renderPostItem(p, slug as FullSlug))}</ol>
-              </div>
-            ))}
+            {[...months.entries()].map(([month, items]) => {
+              // 月份双语：中文键 "9 月" → 英文显示 "Sep"
+              const mIdx = month === "未分类" ? -1 : Number(month.replace(/[^0-9]/g, "")) - 1
+              const label =
+                lang === "zh" ? month : mIdx >= 0 && mIdx < 12 ? enMonths[mIdx] : "Undated"
+              return (
+                <div class="rp-month">
+                  <h3 class="rp-month-head">
+                    <span class="rp-month-label">{label}</span>
+                    <span class="rp-month-count">
+                      {lang === "zh" ? `${items.length} 篇` : `${items.length}`}
+                    </span>
+                  </h3>
+                  <ol class="rp-list">
+                    {items.map((p) => renderPostItem(p, slug as FullSlug, lang))}
+                  </ol>
+                </div>
+              )
+            })}
           </div>
         ))}
+      </>
+    )
+
+    return (
+      <section class="post-list">
+        <span data-lang-block="zh">{renderAll("zh")}</span>
+        <span data-lang-block="en">{renderAll("en")}</span>
       </section>
     )
   }

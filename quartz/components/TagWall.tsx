@@ -18,6 +18,7 @@ export default (() => {
           !f.frontmatter?.draft &&
           !f.frontmatter?.exclude &&
           !!f.frontmatter?.title &&
+          f.frontmatter?.lang !== "en" && // 英文独立版不进中文标签墙
           f.slug !== "index" &&
           !f.slug?.endsWith("/index") &&
           !f.slug?.startsWith("项目/"),
@@ -42,19 +43,31 @@ export default (() => {
 
     if (entries.length === 0) return null
 
-    return (
-      <div class="tag-wall">
+    /** 中英两份渲染，由 language.inline.ts 按当前语言显隐 */
+    const renderAll = (lang: "zh" | "en") => (
+      <>
         {entries.map(([tag, items]) => (
           <section class="tag-group">
             <div class="tag-group-head">
               <a class="tag-group-name" href={resolveRelative(slug, `tags/${tag}` as FullSlug)}>
                 # {tag}
               </a>
-              <span class="tag-group-count">{items.length} 篇</span>
+              <span class="tag-group-count">
+                {lang === "zh" ? `${items.length} 篇` : `${items.length}`}
+              </span>
             </div>
-            <ol class="rp-list">{items.map((page) => renderPostItem(page, slug as FullSlug))}</ol>
+            <ol class="rp-list">
+              {items.map((page) => renderPostItem(page, slug as FullSlug, lang))}
+            </ol>
           </section>
         ))}
+      </>
+    )
+
+    return (
+      <div class="tag-wall">
+        <span data-lang-block="zh">{renderAll("zh")}</span>
+        <span data-lang-block="en">{renderAll("en")}</span>
       </div>
     )
   }

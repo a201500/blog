@@ -6,6 +6,46 @@
 
 // ====== 主题：极简画廊单栏（移植自 astro-art-portfolio）======
 
+// ---- 中英切换：按 <html data-language> 显示对应语言的文案块 ----
+// 页面里中英两份内容都渲染，这里决定谁可见（切换零延迟，无需请求）
+//
+// ⚠️ 踩过的坑：本项目的 CSS 压缩器会删掉选择器里所有组合器前后的空格，
+//    `html[x] [y]` 会被压成 `html[x][y]`（同一元素，永不匹配），`>` 也会被删。
+//    所以这里不能用后代选择器，改用「相邻兄弟」思路：
+//    语言块两两相邻渲染（zh 块紧跟 en 块），由各块自己用同辈选择器判断。
+//
+// 实际采用最简单的稳妥写法：在 language.inline.ts 里做 DOM 过滤，
+// CSS 只负责基础布局，不承担显示/隐藏逻辑（见下方 .lang-hidden）。
+[data-lang-block] {
+  display: contents;
+}
+
+[data-lang-block].lang-hidden {
+  display: none !important;
+}
+
+// ⚠️ 这里曾踩坑：[data-lang-block] 用 display:contents 会让 .post-list / .tag-wall
+// 内部的 flex、gap 等布局失效（元素被"提升"到父容器参与布局）。
+// 所以这几个双语容器内的数据块改为 block，由外层 section 承担布局。
+.post-list > [data-lang-block],
+.tag-wall > [data-lang-block] {
+  display: block;
+}
+
+// 切换时给内容一个轻微的淡入，让语言切换有感知（可选）
+.lang-switching [data-lang-block] {
+  animation: lang-fade 0.22s ease-out;
+}
+
+@keyframes lang-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 // ---- 字体链：衬线标题（英文 Playfair / 中文宋体系），正文无衬线 + 系统中文 ----
 :root {
   --headerFont: "Playfair Display", "Source Han Serif SC", "STZhongsong", "SimSun", serif;
@@ -75,6 +115,21 @@
 /* 首页不显示日期行（内容由 frontmatter 驱动） */
 [data-slug="index"] .content-meta {
   display: none;
+}
+
+/* ---- 文章页：英文独立版（frontmatter lang: en）的顶部标记 ---- */
+.article-lang-note {
+  font-size: 0.78rem;
+  color: var(--gray);
+  margin: -0.4rem 0 1.2rem;
+  padding: 0.35rem 0.7rem;
+  border-left: 2px solid color-mix(in srgb, var(--secondary) 55%, transparent);
+  background: color-mix(in srgb, var(--lightgray) 40%, transparent);
+  border-radius: 0 4px 4px 0;
+}
+
+.article-lang-note a {
+  color: var(--secondary);
 }
 
 [data-slug="index"] article > p > a {
@@ -156,3 +211,173 @@ article img {
     display: none;
   }
 }
+
+// ====== 悬浮目录（复刻 chengliang.pro 的浮动 TOC）======
+//
+// 定位思路：正文是 780px 居中窄栏。悬浮目录挂在窄栏「左侧的空白区」。
+//   left: calc(50% + 390px + 间隙)  →  从视口中心往右推半个正文宽 + 间隙，
+//   正好落在正文右边缘之外，所以不会压住文字（chengliang 放左边，
+//   但本站正文右侧空白更宽裕，放右侧视觉更稳，也不会和左侧品牌/头像冲突）。
+//
+// 桌面三档（用视口宽度判断，不用容器查询，兼容性稳）：
+//   < 1280px        → 隐藏（没有多余空白，硬放会压正文）
+//   1280 ~ 1500px   → 显示，但收窄到 150px
+//   > 1500px        → 完整 190px
+.floating-toc {
+  position: fixed;
+  top: 6rem;
+  left: calc(50% + 390px + 2.5rem);
+  width: 190px;
+  max-height: calc(100vh - 9rem);
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+  /* 顶部时先不显示，滚动后才淡入（避免和文章大标题抢视觉） */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s;
+}
+
+.floating-toc.ftoc-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+@media all and (max-width: 1279px) {
+  .floating-toc {
+    display: none;
+  }
+}
+
+@media all and (min-width: 1280px) and (max-width: 1499px) {
+  .floating-toc {
+    width: 150px;
+    left: calc(50% + 390px + 1rem);
+  }
+}
+
+/* ---- 折叠开关 ---- */
+.floating-toc-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.4rem 0.55rem;
+  background: color-mix(in srgb, var(--lightgray) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--lightgray) 85%, transparent);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--darkgray);
+  font-family: var(--bodyFont);
+  font-size: 0.78rem;
+  text-align: left;
+  transition: background 0.16s, border-color 0.16s;
+}
+
+.floating-toc-head:hover {
+  background: color-mix(in srgb, var(--secondary) 10%, transparent);
+  border-color: color-mix(in srgb, var(--secondary) 35%, transparent);
+}
+
+.floating-toc-icon {
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.floating-toc-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floating-toc-fold {
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: transform 0.25s ease;
+}
+
+.floating-toc.collapsed .floating-toc-fold {
+  transform: rotate(-90deg);
+}
+
+/* ---- 标题列表 ---- */
+.floating-toc-list {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0 0 0 0.15rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.floating-toc.collapsed .floating-toc-list {
+  display: none;
+}
+
+/* 极细滚动条（WebKit） */
+.floating-toc-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.floating-toc-list::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--gray) 30%, transparent);
+  border-radius: 2px;
+}
+
+.floating-toc-list li {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.floating-toc-list a {
+  display: block;
+  padding: 0.26rem 0.5rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--gray);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  border-radius: 0 4px 4px 0;
+  transition: color 0.16s, border-color 0.16s, background 0.16s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floating-toc-list a:hover {
+  color: var(--dark);
+  background: color-mix(in srgb, var(--lightgray) 60%, transparent);
+}
+
+/* 当前章节：左侧竖条 + 加粗，对齐 chengliang 的高亮做法 */
+.floating-toc-list a.ftoc-active {
+  color: var(--secondary);
+  border-left-color: var(--secondary);
+  background: color-mix(in srgb, var(--secondary) 8%, transparent);
+  font-weight: 500;
+}
+
+/* 层级缩进。
+   ⚠️ 踩坑：Quartz 的 toc entry.depth 是「从 0 开始」的——
+   h2 → depth 0、h3 → depth 1、h4 → depth 2（不是 h2=2 那种绝对层级）。
+   所以这里缩进的是 ftoc-depth-1 及以下，depth-0 保持基准不缩进。 */
+.floating-toc-list .ftoc-depth-1 a {
+  padding-left: 1.05rem;
+  font-size: 0.75rem;
+}
+
+.floating-toc-list .ftoc-depth-2 a {
+  padding-left: 1.7rem;
+  font-size: 0.73rem;
+}
+
+.floating-toc-list .ftoc-depth-3 a {
+  padding-left: 2.3rem;
+  font-size: 0.72rem;
+}
+
+/* 深色模式：靠 CSS 变量自动适配，只需保证边框对比度足够 */

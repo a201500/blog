@@ -17,6 +17,7 @@ type Options = {
     strict?: boolean
     reactionsEnabled?: boolean
     inputPosition?: "top" | "bottom"
+    /** 默认语言（中文站点默认 zh-CN）；切到 EN 时由 language.inline.ts 改写后重挂 */
     lang?: string
   }
 }
@@ -35,6 +36,15 @@ export default ((opts: Options) => {
       return <></>
     }
 
+    // 主题 CSS 基址容错：dev / deploy-preview 下 cfg.baseUrl 可能带 http(s):// 前缀，
+    // 直接拼成 https://https://... 会导致 giscus 加载不出来。
+    const rawBase = (opts.options.themeUrl ?? cfg.baseUrl ?? "example.com").replace(
+      /^https?:\/\//,
+      "",
+    )
+    const themeUrl = opts.options.themeUrl ?? `https://${rawBase}/static/giscus`
+    const defaultLang = opts.options.lang ?? (cfg.locale?.startsWith("zh") ? "zh-CN" : "en")
+
     return (
       <div
         class={classNames(displayClass, "giscus")}
@@ -48,10 +58,8 @@ export default ((opts: Options) => {
         data-input-position={opts.options.inputPosition ?? "bottom"}
         data-light-theme={opts.options.lightTheme ?? "light"}
         data-dark-theme={opts.options.darkTheme ?? "dark"}
-        data-theme-url={
-          opts.options.themeUrl ?? `https://${cfg.baseUrl ?? "example.com"}/static/giscus`
-        }
-        data-lang={opts.options.lang ?? "en"}
+        data-theme-url={themeUrl}
+        data-lang={defaultLang}
       ></div>
     )
   }

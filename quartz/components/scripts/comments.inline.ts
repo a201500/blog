@@ -59,10 +59,21 @@ type GiscusElement = Omit<HTMLElement, "dataset"> & {
   }
 }
 
-document.addEventListener("nav", () => {
-  const giscusContainer = document.querySelector(".giscus") as GiscusElement
-  if (!giscusContainer) {
-    return
+const getGiscusLang = (el: Element) => el.getAttribute("data-lang") ?? "en"
+
+/**
+ * 挂载 giscus。
+ * 之所以每次重新挂载（而不是复用 iframe）：
+ * giscus 的界面语言只能在脚本初始化时通过 data-lang 传入，
+ * 中英切换后必须重挂，否则评论区还停留在旧语言。
+ */
+function mountGiscus() {
+  const giscusContainer = document.querySelector(".giscus") as GiscusElement | null
+  if (!giscusContainer) return
+
+  // 清掉旧脚本与旧 iframe，避免出现两个评论区
+  for (const old of Array.from(giscusContainer.querySelectorAll("script, iframe"))) {
+    old.remove()
   }
 
   const giscusScript = document.createElement("script")
@@ -79,14 +90,27 @@ document.addEventListener("nav", () => {
   giscusScript.setAttribute("data-strict", giscusContainer.dataset.strict)
   giscusScript.setAttribute("data-reactions-enabled", giscusContainer.dataset.reactionsEnabled)
   giscusScript.setAttribute("data-input-position", giscusContainer.dataset.inputPosition)
-  giscusScript.setAttribute("data-lang", giscusContainer.dataset.lang)
+  giscusScript.setAttribute("data-lang", getGiscusLang(giscusContainer))
   const theme = document.documentElement.getAttribute("saved-theme")
   if (theme) {
     giscusScript.setAttribute("data-theme", getThemeUrl(getThemeName(theme)))
   }
 
   giscusContainer.appendChild(giscusScript)
+}
+
+document.addEventListener("nav", () => {
+  if (!document.querySelector(".giscus")) return
+
+  mountGiscus()
+
+  // 语言切换后重挂，让评论区跟着换语言（由 language.inline.ts 派发）
+  const onLangReload = () => mountGiscus()
+  window.addEventListener("giscus-reload", onLangReload)
 
   document.addEventListener("themechange", changeTheme)
-  window.addCleanup(() => document.removeEventListener("themechange", changeTheme))
+  window.addCleanup(() => {
+    document.removeEventListener("themechange", changeTheme)
+    window.removeEventListener("giscus-reload", onLangReload)
+  })
 })

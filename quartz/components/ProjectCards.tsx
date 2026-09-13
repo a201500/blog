@@ -11,16 +11,26 @@ export function resolveProjectCover(
   return /^https?:/.test(img) ? img : joinSegments(baseDir, img)
 }
 
-/** 首页项目行卡（紧凑横向：小缩略图 + 标题/简介/技术栈，整卡可点击进项目文章） */
+/**
+ * 首页项目行卡（紧凑横向：小缩略图 + 标题/简介/技术栈，整卡可点击进项目文章）
+ * lang 指定取哪一份文案：zh 用 title/description/stack，en 用 titleEn/descriptionEn/stackEn
+ * hasEnVersion 为 false 时（英文模式），卡片底部标注「Article in Chinese」避免点进去落差
+ */
 export function renderProjectRow(
   page: QuartzPluginData,
   cover: string | undefined,
   currentSlug: FullSlug,
+  lang: "zh" | "en" = "zh",
+  hasEnVersion = false,
 ) {
   const pf = page.frontmatter ?? {}
-  const title = pf.title as string
-  const desc = pf.description as string | undefined
-  const stack = ((pf.stack ?? pf.tags ?? []) as string[]).filter((t) => t !== "项目")
+  const title = (lang === "en" ? (pf.titleEn ?? pf.title) : pf.title) as string
+  const desc = (lang === "en" ? (pf.descriptionEn ?? pf.description) : pf.description) as
+    | string
+    | undefined
+  const stack = (
+    (lang === "en" ? (pf.stackEn ?? pf.stack ?? pf.tags) : (pf.stack ?? pf.tags)) ?? []
+  ).filter((t) => t !== "项目")
 
   return (
     <a class="project-row" href={resolveRelative(currentSlug, page.slug!)}>
@@ -40,6 +50,9 @@ export function renderProjectRow(
               <span>{t}</span>
             ))}
           </div>
+        )}
+        {lang === "en" && !hasEnVersion && (
+          <span class="project-lang-note">Article in Chinese</span>
         )}
       </div>
     </a>
@@ -143,6 +156,14 @@ export const projectCardStyles = `
   border-radius: 4px;
   background: color-mix(in srgb, var(--lightgray) 70%, transparent);
   color: var(--darkgray);
+}
+
+/* 英文模式下无独立英文正文时的提示 */
+.project-lang-note {
+  font-size: 0.68rem;
+  color: var(--gray);
+  margin-top: 0.3rem;
+  opacity: 0.75;
 }
 
 .project-more {
