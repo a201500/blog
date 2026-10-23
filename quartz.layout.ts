@@ -24,6 +24,7 @@ export const sharedPageComponents: SharedLayout = {
               // textEn：切到 EN 时由 language.inline.ts 读取 data-nav-en 替换文本（见 Nav.tsx）
               { text: "博客", textEn: "Blog", href: "博客/index" },
               { text: "项目", textEn: "Projects", href: "项目/index" },
+              { text: "收藏", textEn: "Collections", href: "收藏/index" },
             ],
           }),
           grow: true,
@@ -86,6 +87,8 @@ export const defaultListPageLayout: PageLayout = {
     Component.ContentMeta(),
     Component.TagWall(),
     Component.ProjectShowcase(),
+    // 收藏页：封面 + 评分卡片网格，只认 slug === "收藏/index"
+    Component.CollectionGrid(),
   ],
   left: [],
   right: [],

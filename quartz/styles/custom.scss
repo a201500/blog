@@ -112,6 +112,13 @@
   display: none;
 }
 
+/* 收藏页：隐藏大标题、日期，以及 folder 自带的「此文件夹下有 N 条笔记」 */
+[data-slug="收藏/index"] .article-title,
+[data-slug="收藏/index"] .content-meta,
+[data-slug="收藏/index"] .page-listing {
+  display: none;
+}
+
 /* 首页不显示日期行（内容由 frontmatter 驱动） */
 [data-slug="index"] .content-meta {
   display: none;
