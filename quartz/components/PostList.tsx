@@ -228,6 +228,7 @@ export default ((opts?: Options) => {
           f.slug !== "index" &&
           !f.slug?.endsWith("/index") && // folder 索引页（博客/index、项目/index）不是文章
           !f.slug?.startsWith("项目/") && // 项目文章只进项目页，不进博客列表
+          !f.slug?.startsWith("收藏/") && // 收藏作品笔记只进收藏页，不进博客列表
           f.frontmatter?.lang !== "en" && // 英文独立版（xxx-en.md）不进中文列表
           !f.frontmatter?.draft &&
           !f.frontmatter?.exclude &&

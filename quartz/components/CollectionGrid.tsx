@@ -1,15 +1,17 @@
 import fs from "fs"
 import path from "path"
+import { QuartzPluginData } from "../plugins/vfile"
 import { FilePath, FullSlug, joinSegments, pathToRoot, slugifyFilePath } from "../util/path"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import collectionFilter from "./scripts/collectionFilter.inline"
 
 /** 收藏文件夹 slug（content/收藏/） */
 const DIR = "收藏"
+const DIR_PREFIX = `${DIR}/`
 /** 封面图目录（相对 content/），frontmatter 里只写文件名 */
 const COVERS_DIR = "attachments/covers"
 
-/** 载体固定顺序；填了才出现标签，没条目就不渲染 */
+/** 载体固定顺序；有数据才出现标签，没条目就不渲染。未知载体排在最后 */
 const CARRIERS = ["动画", "剧集", "电影", "游戏", "小说", "漫画"]
 const CARRIERS_EN: Record<string, string> = {
   动画: "Anime",
@@ -18,20 +20,6 @@ const CARRIERS_EN: Record<string, string> = {
   游戏: "Games",
   小说: "Novels",
   漫画: "Comics",
-}
-
-/**
- * 一条收藏。字段名用中文，是为了在 Obsidian 里填写时一眼能看懂。
- * 只有 载体 / 名称 / 评分 是必填。
- */
-interface CollectionItem {
-  载体?: string
-  名称?: string
-  名称En?: string
-  评分?: number | string
-  封面?: string
-  短评?: string
-  短评En?: string
 }
 
 const clampRating = (raw: unknown): number | null => {
@@ -43,22 +31,86 @@ const clampRating = (raw: unknown): number | null => {
 /** 整数显示成 8，小数保留一位（9.4） */
 const formatScore = (n: number): string => (Number.isInteger(n) ? String(n) : n.toFixed(1))
 
+const toStr = (v: unknown): string => (typeof v === "string" ? v.trim() : "")
+
+/** 一篇作品笔记解析后的样子 */
+interface CollectionItem {
+  carrier: string
+  name: string
+  nameEn: string
+  note: string
+  noteEn: string
+  coverFile?: string
+  rating: number | null
+  order: number
+}
+
+/**
+ * 聚合 收藏/<载体>/<作品>.md —— 一个作品一篇笔记，载体就是所在文件夹名。
+ *
+ * 这样在 Obsidian 里加一部作品 = 在文件夹里新建一篇笔记、填几个普通属性，
+ * 不需要动 index.md，也不会碰到「属性面板不支持嵌套对象数组」的问题。
+ *
+ * 排序：`排序` 数字升序；没填的按评分从高到低排在后面。
+ * 直接放在 收藏/ 根下的笔记（不在载体文件夹里）会被忽略。
+ */
+export function collectCollections(allFiles: QuartzPluginData[]): CollectionItem[] {
+  return allFiles
+    .filter((f) => {
+      const s = f.slug
+      if (!s || !s.startsWith(DIR_PREFIX)) return false
+      if (s.endsWith("/index")) return false // 文件夹索引页本身
+      if (f.frontmatter?.lang === "en") return false // 英文独立版不单独成卡
+      if (f.frontmatter?.draft) return false
+      return true
+    })
+    .map((f) => {
+      const parts = f.slug!.split("/")
+      // 收藏/动画/进击的巨人 → parts[1] 是载体
+      const carrier = parts.length >= 3 ? parts[parts.length - 2] : ""
+      const fm = f.frontmatter ?? {}
+      const orderRaw = Number.parseFloat(String(fm["排序"] ?? ""))
+      return {
+        carrier,
+        name: toStr(fm.title),
+        nameEn: toStr(fm.titleEn) || toStr(fm.title),
+        note: toStr(fm["短评"]),
+        noteEn: toStr(fm["短评En"]) || toStr(fm["短评"]),
+        coverFile: toStr(fm["封面"]) || undefined,
+        rating: clampRating(fm["评分"]),
+        order: Number.isFinite(orderRaw) ? orderRaw : Number.POSITIVE_INFINITY,
+      }
+    })
+    .filter((it) => it.carrier !== "" && it.name !== "")
+    .sort((a, b) => {
+      if (a.order !== b.order) return a.order - b.order
+      const ra = a.rating ?? -1
+      const rb = b.rating ?? -1
+      if (ra !== rb) return rb - ra
+      return a.name.localeCompare(b.name, "zh")
+    })
+}
+
 /**
  * 收藏页（/收藏/）：封面 + 名称 + 自评分，纯展示，卡片不可点击。
  *
- * 数据来源是本页 frontmatter 的 `收藏` 列表（见 content/收藏/index.md），
- * 不聚合文件夹下的文件 —— 所以不会有条目散落成独立文章页。
+ * 数据由 collectCollections 从 content/收藏/<载体>/ 下的笔记聚合而来，
+ * 所以「加一部作品」= 新建一篇笔记，不用回来改这个文件或 index.md。
  *
  * 双语：每个文本节点包一对 <span data-lang-block>，图片只渲染一次。
  * 不走「整套渲染两遍」的老做法，否则每张封面会被请求两次。
  */
 export default (() => {
-  const CollectionGrid: QuartzComponent = ({ fileData, ctx }: QuartzComponentProps) => {
+  const CollectionGrid: QuartzComponent = ({
+    fileData,
+    allFiles,
+    ctx,
+  }: QuartzComponentProps) => {
     const slug = fileData.slug ?? ""
     if (slug !== `${DIR}/index` && slug !== DIR) return null
 
     const fm = fileData.frontmatter ?? {}
-    const items = (fm["收藏"] ?? []) as CollectionItem[]
+    const items = collectCollections(allFiles)
     if (items.length === 0) return null
 
     const eyebrow = (fm.eyebrow as string) ?? "WATCHED · PLAYED · READ"
@@ -83,22 +135,29 @@ export default (() => {
       return joinSegments(baseDir, slugifyFilePath(joinSegments(COVERS_DIR, bare) as FilePath))
     }
 
-    // 按载体分组，组内保持 frontmatter 里的原始顺序（纯手动排序）
-    const groups = CARRIERS.map((carrier) => ({
+    // 先按 CARRIERS 固定顺序排，未知载体排在最后（按名字）
+    const carrierRank = (c: string) => {
+      const i = CARRIERS.indexOf(c)
+      return i === -1 ? CARRIERS.length : i
+    }
+    const carriers = Array.from(new Set(items.map((it) => it.carrier))).sort(
+      (a, b) => carrierRank(a) - carrierRank(b) || a.localeCompare(b, "zh"),
+    )
+    const groups = carriers.map((carrier) => ({
       carrier,
-      list: items.filter((it) => (it["载体"] ?? "").trim() === carrier),
-    })).filter((g) => g.list.length > 0)
+      list: items.filter((it) => it.carrier === carrier),
+    }))
 
     if (groups.length === 0) return null
 
     const renderCard = (item: CollectionItem) => {
-      const name = (item["名称"] ?? "").trim()
+      const name = item.name
       if (!name) return null
-      const nameEn = (item["名称En"] ?? "").trim() || name
-      const note = (item["短评"] ?? "").trim()
-      const noteEn = (item["短评En"] ?? "").trim() || note
-      const cover = coverUrl(item["封面"])
-      const rating = clampRating(item["评分"])
+      const nameEn = item.nameEn || name
+      const note = item.note
+      const noteEn = item.noteEn || note
+      const cover = coverUrl(item.coverFile)
+      const rating = item.rating
       const fill = rating === null ? 0 : (rating / 10) * 100
 
       return (

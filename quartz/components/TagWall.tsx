@@ -21,7 +21,8 @@ export default (() => {
           f.frontmatter?.lang !== "en" && // 英文独立版不进中文标签墙
           f.slug !== "index" &&
           !f.slug?.endsWith("/index") &&
-          !f.slug?.startsWith("项目/"),
+          !f.slug?.startsWith("项目/") &&
+          !f.slug?.startsWith("收藏/"), // 收藏作品笔记只进收藏页，不进标签墙
       )
       .sort(byDateAndAlphabetical(cfg))
 
