@@ -1,0 +1,24 @@
+feat: 新增「收藏」页（封面卡片网格 + 自评分）
+
+导航新增「收藏 / Collections」，纯展示页，卡片不可点击、无条目详情页。
+
+实现要点：
+- 数据单文件化：content/收藏/index.md 的 frontmatter 写 YAML 列表，
+  不建每部作品一个 md。因为 xxx/index.md 本来就被 PostList / TagWall
+  排除，所以首页最新文章、博客列表、标签墙零污染，无需改那两个组件。
+- 双语按文本节点成对渲染（span data-lang-block），而不是整套渲染两遍：
+  卡片含封面图，整套双渲染会让每张图请求两次。图片只渲染一次。
+- 星级用两层星形叠加，上层按 评分/10 裁宽度，小数也精确；
+  右侧跟原始数字（5 星对应 10 分，1 星 = 2 分，数字才是准确信息）。
+- 载体标签（动画/剧集/电影/游戏/小说/漫画）有数据才渲染，
+  新增载体只需往 YAML 里加条目，不用改代码。
+- 封面放 content/attachments/covers/，frontmatter 只写文件名；
+  构建期用 fs.existsSync 判断文件是否存在，不存在自动退回首字占位，
+  避免 <img> 指向不存在的地址造成破图。
+- 排序 = YAML 数组顺序（纯手动），组件内不重排。
+
+配套：
+- 新增 CollectionGrid 组件 + collectionFilter.inline.ts（载体切换）
+- quartz.layout.ts：导航项 + defaultListPageLayout 接入
+- custom.scss：隐藏 收藏/index 的标题、日期、folder 文件列表
+- verify-lang.mjs：导航期望值改为 3 项，并补充收藏页 8 项断言
