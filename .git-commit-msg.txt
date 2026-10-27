@@ -1,24 +1,24 @@
-feat: 新增「收藏」页（封面卡片网格 + 自评分）
+refactor(收藏): 改成「一个载体一个文件夹，一个作品一篇笔记」
 
-导航新增「收藏 / Collections」，纯展示页，卡片不可点击、无条目详情页。
+原做法把所有作品写在 收藏/index.md 的 frontmatter 列表里，问题：
+- Obsidian 属性面板不支持「对象数组」，改不了、只能手写 YAML；
+- 加一部作品要动整个文件，容易破坏缩进，本次就因开头 --- 丢失
+  导致整段 frontmatter 被当正文渲染。
 
-实现要点：
-- 数据单文件化：content/收藏/index.md 的 frontmatter 写 YAML 列表，
-  不建每部作品一个 md。因为 xxx/index.md 本来就被 PostList / TagWall
-  排除，所以首页最新文章、博客列表、标签墙零污染，无需改那两个组件。
-- 双语按文本节点成对渲染（span data-lang-block），而不是整套渲染两遍：
-  卡片含封面图，整套双渲染会让每张图请求两次。图片只渲染一次。
-- 星级用两层星形叠加，上层按 评分/10 裁宽度，小数也精确；
-  右侧跟原始数字（5 星对应 10 分，1 星 = 2 分，数字才是准确信息）。
-- 载体标签（动画/剧集/电影/游戏/小说/漫画）有数据才渲染，
-  新增载体只需往 YAML 里加条目，不用改代码。
-- 封面放 content/attachments/covers/，frontmatter 只写文件名；
-  构建期用 fs.existsSync 判断文件是否存在，不存在自动退回首字占位，
-  避免 <img> 指向不存在的地址造成破图。
-- 排序 = YAML 数组顺序（纯手动），组件内不重排。
+新结构：
+  content/收藏/index.md          只放页面级 frontmatter（标题/介绍）
+  content/收藏/<载体>/<作品>.md   一个作品一篇，载体 = 文件夹名
 
-配套：
-- 新增 CollectionGrid 组件 + collectionFilter.inline.ts（载体切换）
-- quartz.layout.ts：导航项 + defaultListPageLayout 接入
-- custom.scss：隐藏 收藏/index 的标题、日期、folder 文件列表
-- verify-lang.mjs：导航期望值改为 3 项，并补充收藏页 8 项断言
+每篇作品属性全部是标量，Obsidian 属性面板可直接编辑：
+  title / titleEn / 评分 / 封面 / 短评 / 排序
+
+改动：
+- CollectionGrid：不再读本页 frontmatter，改为 collectCollections()
+  聚合 收藏/<载体>/ 下的笔记；载体取自 slug 的父级目录名，
+  所以新建一个文件夹就自动多一个标签，无需改代码。
+- 排序：`排序` 数字升序，未填的按评分降序排在后面。
+- 新增载体顺序：按 CARRIERS 常量排，未知载体追加在末尾。
+- PostList / TagWall：排除 收藏/ 前缀，否则作品笔记会被当成
+  博客文章混进首页「最新文章」和标签墙。
+- 迁移原有 9 条示例为独立笔记（含用户新增的「赛博朋克：边缘行者2」）。
+  该条 titleEn 含英文冒号，YAML 必须加引号，否则解析失败。
