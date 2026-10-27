@@ -1,4 +1,3 @@
----
 title: 收藏
 titleEn: Collections
 eyebrow: WATCHED · PLAYED · READ
