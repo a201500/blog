@@ -34,6 +34,7 @@ import LanguageToggle from "./LanguageToggle"
 import ArticleLangNote from "./ArticleLangNote"
 import FloatingToc from "./FloatingToc"
 import CollectionGrid from "./CollectionGrid"
+import CollectionWorkHeader from "./CollectionWorkHeader"
 
 export {
   ArticleTitle,
@@ -72,4 +73,5 @@ export {
   ArticleLangNote,
   FloatingToc,
   CollectionGrid,
+  CollectionWorkHeader,
 }

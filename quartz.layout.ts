@@ -67,6 +67,8 @@ export const sharedPageComponents: SharedLayout = {
 export const defaultContentPageLayout: PageLayout = {
   beforeBody: [
     Component.ArticleTitle(),
+    // 收藏作品页头部（小封面+星级+短评）：只认 slug 形如 收藏/<载体>/<作品>，其它页面返回 null
+    Component.CollectionWorkHeader(),
     Component.ContentMeta(),
     Component.TagList(),
     // 有独立英文版（xxx-en.md）时，顶部露出「English version →」入口

@@ -119,6 +119,12 @@
   display: none;
 }
 
+/* 收藏作品页：正文只是一段感想，不显示「N 分钟阅读」，只留日期
+   .content-meta 里日期是 <time>、阅读时长是 <span>，所以只命中后者 */
+[data-slug^="收藏/"] .content-meta span {
+  display: none;
+}
+
 /* 首页不显示日期行（内容由 frontmatter 驱动） */
 [data-slug="index"] .content-meta {
   display: none;

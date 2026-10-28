@@ -1,15 +1,17 @@
-import fs from "fs"
-import path from "path"
 import { QuartzPluginData } from "../plugins/vfile"
-import { FilePath, FullSlug, joinSegments, pathToRoot, slugifyFilePath } from "../util/path"
+import { FullSlug, resolveRelative } from "../util/path"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import collectionFilter from "./scripts/collectionFilter.inline"
-
-/** 收藏文件夹 slug（content/收藏/） */
-const DIR = "收藏"
-const DIR_PREFIX = `${DIR}/`
-/** 封面图目录（相对 content/），frontmatter 里只写文件名 */
-const COVERS_DIR = "attachments/covers"
+import {
+  COLLECTION_DIR,
+  COLLECTION_PREFIX,
+  clampRating,
+  collectionCoverUrl,
+  formatScore,
+  renderStars,
+  starsCss,
+  toStr,
+} from "./collectionShared"
 
 /** 载体固定顺序；有数据才出现标签，没条目就不渲染。未知载体排在最后 */
 const CARRIERS = ["动画", "剧集", "电影", "游戏", "小说", "漫画"]
@@ -22,17 +24,6 @@ const CARRIERS_EN: Record<string, string> = {
   漫画: "Comics",
 }
 
-const clampRating = (raw: unknown): number | null => {
-  const n = typeof raw === "number" ? raw : Number.parseFloat(String(raw ?? ""))
-  if (!Number.isFinite(n)) return null
-  return Math.min(10, Math.max(0, n))
-}
-
-/** 整数显示成 8，小数保留一位（9.4） */
-const formatScore = (n: number): string => (Number.isInteger(n) ? String(n) : n.toFixed(1))
-
-const toStr = (v: unknown): string => (typeof v === "string" ? v.trim() : "")
-
 /** 一篇作品笔记解析后的样子 */
 interface CollectionItem {
   carrier: string
@@ -43,6 +34,10 @@ interface CollectionItem {
   coverFile?: string
   rating: number | null
   order: number
+  /** 作品页地址，卡片有正文时用它做链接 */
+  slug: FullSlug
+  /** 正文写没写。空笔记的卡片不可点，避免点进去是一片空白 */
+  hasBody: boolean
 }
 
 /**
@@ -58,7 +53,7 @@ export function collectCollections(allFiles: QuartzPluginData[]): CollectionItem
   return allFiles
     .filter((f) => {
       const s = f.slug
-      if (!s || !s.startsWith(DIR_PREFIX)) return false
+      if (!s || !s.startsWith(COLLECTION_PREFIX)) return false
       if (s.endsWith("/index")) return false // 文件夹索引页本身
       if (f.frontmatter?.lang === "en") return false // 英文独立版不单独成卡
       if (f.frontmatter?.draft) return false
@@ -79,6 +74,10 @@ export function collectCollections(allFiles: QuartzPluginData[]): CollectionItem
         coverFile: toStr(fm["封面"]) || undefined,
         rating: clampRating(fm["评分"]),
         order: Number.isFinite(orderRaw) ? orderRaw : Number.POSITIVE_INFINITY,
+        slug: f.slug as FullSlug,
+        // 正文纯文本由 plugins/transformers/description.ts 写进 file.data.text，
+        // 空笔记就是空字符串。ContentMeta 判断「有没有正文」用的也是同一个字段。
+        hasBody: !!(f.text && f.text.trim()),
       }
     })
     .filter((it) => it.carrier !== "" && it.name !== "")
@@ -92,7 +91,10 @@ export function collectCollections(allFiles: QuartzPluginData[]): CollectionItem
 }
 
 /**
- * 收藏页（/收藏/）：封面 + 名称 + 自评分，纯展示，卡片不可点击。
+ * 收藏页（/收藏/）：封面 + 名称 + 自评分。
+ *
+ * 卡片默认只是陈列；某篇作品写了正文，那张卡就整张变成链接（点进去看感想），
+ * 封面右上角多一个「感想」胶囊标记。没写正文的卡不可点，避免点进空白页。
  *
  * 数据由 collectCollections 从 content/收藏/<载体>/ 下的笔记聚合而来，
  * 所以「加一部作品」= 新建一篇笔记，不用回来改这个文件或 index.md。
@@ -107,7 +109,7 @@ export default (() => {
     ctx,
   }: QuartzComponentProps) => {
     const slug = fileData.slug ?? ""
-    if (slug !== `${DIR}/index` && slug !== DIR) return null
+    if (slug !== `${COLLECTION_DIR}/index` && slug !== COLLECTION_DIR) return null
 
     const fm = fileData.frontmatter ?? {}
     const items = collectCollections(allFiles)
@@ -119,21 +121,8 @@ export default (() => {
     const lede = fm.lede as string | undefined
     const ledeEn = (fm.ledeEn as string | undefined) ?? lede
 
-    const baseDir = pathToRoot(slug as FullSlug)
-    const coversDir = path.join(ctx.argv.directory, COVERS_DIR)
-
-    /**
-     * 封面：外链直接返回；本地只写文件名，拼到 attachments/covers/ 下并做 slug 化。
-     * 构建期先看文件在不在 —— 不在就返回 undefined，退回「首字 + 淡色块」占位，
-     * 否则 <img> 会指向一个不存在的地址，页面上就是破图。
-     */
-    const coverUrl = (file?: string): string | undefined => {
-      if (!file) return undefined
-      if (/^https?:\/\//.test(file)) return file
-      const bare = file.replace(/^.*[\\/]/, "")
-      if (!fs.existsSync(path.join(coversDir, bare))) return undefined
-      return joinSegments(baseDir, slugifyFilePath(joinSegments(COVERS_DIR, bare) as FilePath))
-    }
+    const coverUrl = (file?: string): string | undefined =>
+      collectionCoverUrl(ctx.argv.directory, slug, file)
 
     // 先按 CARRIERS 固定顺序排，未知载体排在最后（按名字）
     const carrierRank = (c: string) => {
@@ -158,28 +147,31 @@ export default (() => {
       const noteEn = item.noteEn || note
       const cover = coverUrl(item.coverFile)
       const rating = item.rating
-      const fill = rating === null ? 0 : (rating / 10) * 100
 
-      return (
-        <figure class="cl-card">
+      const inner = (
+        <>
           <div class={cover ? "cl-cover has-image" : "cl-cover"}>
             {cover ? (
-              <img src={cover} alt={name} loading="lazy" decoding="async" />
+              // alt 留空：名字在下面已经有一份，读屏不要念两遍
+              <img src={cover} alt="" loading="lazy" decoding="async" />
             ) : (
               <span class="cl-initial">{name.slice(0, 1)}</span>
             )}
+            {item.hasBody && (
+              <span class="cl-badge">
+                <span data-lang-block="zh">感想</span>
+                <span data-lang-block="en">Review</span>
+              </span>
+            )}
           </div>
-          <figcaption class="cl-meta">
+          <div class="cl-meta">
             <span class="cl-name">
               <span data-lang-block="zh">{name}</span>
               <span data-lang-block="en">{nameEn}</span>
             </span>
             {rating !== null && (
               <span class="cl-rate">
-                <span class="cl-stars" style={`--cl-fill:${fill.toFixed(2)}%`}>
-                  <span class="cl-stars-base">★★★★★</span>
-                  <span class="cl-stars-fill">★★★★★</span>
-                </span>
+                {renderStars(rating)}
                 <span class="cl-score">{formatScore(rating)}</span>
               </span>
             )}
@@ -189,8 +181,17 @@ export default (() => {
                 <span data-lang-block="en">{noteEn}</span>
               </span>
             )}
-          </figcaption>
-        </figure>
+          </div>
+        </>
+      )
+
+      // 只有写了正文的作品才整张卡变成链接；空笔记保持不可点
+      return item.hasBody ? (
+        <a class="cl-card cl-card-link" href={resolveRelative(slug as FullSlug, item.slug)}>
+          {inner}
+        </a>
+      ) : (
+        <figure class="cl-card">{inner}</figure>
       )
     }
 
@@ -244,7 +245,10 @@ export default (() => {
 
   CollectionGrid.afterDOMLoaded = collectionFilter
 
-  CollectionGrid.css = `
+  // 星形样式来自 collectionShared（它不是组件，CSS 不会被自动收集，只能手动拼）
+  CollectionGrid.css =
+    starsCss +
+    `
 .cl-view {
   margin-top: 0.5rem;
 }
@@ -373,8 +377,44 @@ export default (() => {
   transition: transform 0.16s;
 }
 
-.cl-card:hover .cl-cover {
+/* 整张卡可点时用 <a> 包起来；base.scss 的 a{color/font-weight} 会漏进来，必须压回去 */
+.cl-card-link {
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+}
+
+.cl-card-link:hover {
+  text-decoration: none;
+}
+
+.cl-card-link:focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.cl-card-link:hover .cl-cover {
   transform: translateY(-2px);
+}
+
+.cl-card-link:hover .cl-name {
+  color: var(--secondary);
+}
+
+/* 封面右上角「有感想」标记：跟着封面走，不挡标题 */
+.cl-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: color-mix(in srgb, #17181c 62%, transparent);
+  color: #fff;
+  font-size: 0.62rem;
+  line-height: 1;
+  padding: 0.26rem 0.4rem;
+  border-radius: 4px;
+  pointer-events: none;
+  letter-spacing: 0.02em;
 }
 
 .cl-cover img {
@@ -403,36 +443,13 @@ export default (() => {
   font-weight: 500;
   color: var(--dark);
   line-height: 1.45;
+  transition: color 0.16s;
 }
 
 .cl-rate {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-}
-
-/* 两层星形叠加：底层灰星决定宽度，上层墨绿按 --cl-fill 裁切 */
-.cl-stars {
-  position: relative;
-  display: inline-block;
-  font-size: 0.7rem;
-  line-height: 1;
-  letter-spacing: 0.09em;
-  white-space: nowrap;
-}
-
-.cl-stars-base {
-  color: color-mix(in srgb, var(--lightgray) 78%, var(--gray));
-}
-
-.cl-stars-fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  overflow: hidden;
-  width: var(--cl-fill, 0%);
-  color: var(--secondary);
 }
 
 .cl-score {
